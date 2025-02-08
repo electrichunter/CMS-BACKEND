@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@ninetailed/experience.js-next": "^7.10.0",
+    "bcryptjs": "^2.4.3",
+    "express": "^4.21.2",
+    "mysql2": "^3.12.0"
+  }
+}

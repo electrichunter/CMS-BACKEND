@@ -1,20 +1,21 @@
 import express from 'express';
-import pool from '../../config/dbConfig.js';
-// import bcrypt from 'bcryptjs'; // Şimdilik yorum satırı
+import pool from '../confg/dbconfig.js'; //  
+
+import bcrypt from 'bcryptjs';
 
 const router = express.Router();
 
-// Kayıt Endpoint
+// 🟢 Kayıt Endpoint
 router.post('/', async (req, res) => {
-  const { kullanici_adi, eposta, sifre_hash, rol } = req.body;
+  const { kullanici_adi, eposta, sifre, rol } = req.body;
 
   try {
-    // Validasyon
-    if (!kullanici_adi || !eposta || !sifre_hash || !rol) {
+    // 🔴 Zorunlu alanları kontrol et
+    if (!kullanici_adi || !eposta || !sifre || !rol) {
       return res.status(400).json({ success: false, message: 'Zorunlu alanları doldurun' });
     }
 
-    // E-posta kontrolü
+    // 🔵 E-posta kontrolü
     const [existingUsers] = await pool.query(
       'SELECT id FROM kullanicilar WHERE eposta = ?',
       [eposta]
@@ -27,14 +28,15 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Şimdilik hash kullanmadan direkt kayıt
-    // const hashedPassword = await bcrypt.hash(sifre_hash, 10);
+    // 🟢 Şifreyi hashle
+    const hashedPassword = await bcrypt.hash(sifre, 10);
     
+    // Kullanıcıyı ekle
     const [result] = await pool.query(
       `INSERT INTO kullanicilar 
       (kullanici_adi, eposta, sifre_hash, rol) 
       VALUES (?, ?, ?, ?)`,
-      [kullanici_adi, eposta, sifre_hash /* hashedPassword yerine direkt sifre_hash */, rol]
+      [kullanici_adi, eposta, hashedPassword, rol]
     );
 
     res.status(201).json({
@@ -47,19 +49,19 @@ router.post('/', async (req, res) => {
     console.error('Kayıt hatası:', error);
     res.status(500).json({
       success: false,
-      message: 'Sunucu hatası: ' + error.message
+      message: 'Sunucu hatası, lütfen tekrar deneyin.'
     });
   }
 });
 
-// Giriş Endpoint
+// 🟢 Giriş Endpoint
 router.post('/login', async (req, res) => {
-  const { eposta, sifre_hash } = req.body;
+  const { eposta, sifre } = req.body;
 
   try {
-    // Kullanıcı sorgusu
+    // 🔵 Kullanıcı sorgusu
     const [users] = await pool.query(
-      'SELECT id, kullanici_adi, eposta, sifre_hash, rol FROM kullanicilar WHERE eposta = ?',
+      'SELECT id, sifre_hash FROM kullanicilar WHERE eposta = ?',
       [eposta]
     );
 
@@ -72,9 +74,8 @@ router.post('/login', async (req, res) => {
 
     const user = users[0];
     
-    // Şimdilik direkt string karşılaştırma
-    // const isPasswordValid = await bcrypt.compare(sifre_hash, user.sifre_hash);
-    const isPasswordValid = (sifre_hash === user.sifre_hash);
+    // 🟢 Şifre doğrulama
+    const isPasswordValid = await bcrypt.compare(sifre, user.sifre_hash);
     
     if (!isPasswordValid) {
       return res.status(401).json({ 
@@ -86,21 +87,17 @@ router.post('/login', async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Giriş başarılı',
-      user: {
-        id: user.id,
-        kullanici_adi: user.kullanici_adi,
-        eposta: user.eposta,
-        rol: user.rol
-      }
+      userId: user.id
     });
 
   } catch (error) {
     console.error('Giriş hatası:', error);
     res.status(500).json({
       success: false,
-      message: 'Sunucu hatası: ' + error.message
+      message: 'Sunucu hatası, lütfen tekrar deneyin.'
     });
   }
 });
 
 export default router;
+

@@ -1,7 +1,7 @@
 import express from 'express';
 import user from './routes/login/login-regiser.js';
- import icerik from './routes/içerik/içerik-post.js';
- import icerikget from './routes/içerik/içerik-get.js';
+ import icerik from './routes/icerik/icerik-post.js';
+ import icerikget from './routes/icerik/icerik-get.js';
 const app = express();
 app.use(express.json());
 
@@ -15,7 +15,8 @@ app.use('/user', user);
 
 app.use('/icerik', icerik);
  
-app.use('ıcerikget', icerikget);
+app.use('/icerikget', icerikget);
+
 // 404 Hatası için middleware
 app.use((req, res) => {
     res.status(404).json({ message: 'Bulunamadı.' });

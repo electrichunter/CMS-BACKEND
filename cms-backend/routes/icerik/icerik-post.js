@@ -1,13 +1,24 @@
 import express from 'express';
 import pool from '../confg/dbconfig.js';
-import { nanoid } from 'nanoid'; // 🟢 Slug oluşturma için 
- // 🟢 Slug oluşturma
-    // Slug, bir içeriğin başlığından türetilen ve URL dostu hale getirilen benzersiz bir metin parçasıdır.
-    // Örneğin:
-    // Bir başlığın şu şekilde olduğunu düşünelim:
-    // 📌 Başlık: "Merhaba Dünya! İlk Yazım"
-    // 📌 Slug: merhaba-dunya-ilk-yazim
+import { nanoid } from 'nanoid';
+
 const router = express.Router();
+
+// slug Türkçe karakterleri dönüştürme fonksiyonu
+const turkceKarakterleriDonustur = (text) => {
+  const harfMap = {
+    'ı': 'i', 'ğ': 'g', 'ü': 'u', 'ş': 's', 'ö': 'o', 'ç': 'c',
+    'İ': 'i', 'Ğ': 'g', 'Ü': 'u', 'Ş': 's', 'Ö': 'o', 'Ç': 'c'
+  };
+
+  return text
+    .split('')
+    .map(harf => harfMap[harf] || harf) // Türkçe karakterleri değiştir
+    .join('')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-') // Geçersiz karakterleri "-" ile değiştir
+    .replace(/^-+|-+$/g, ''); // Başta ve sonda "-" kalmasını önle
+};
 
 // 🟢 İçerik Ekleme Endpointi
 router.post('/', async (req, res) => {
@@ -19,8 +30,8 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Zorunlu alanları doldurun' });
     }
 
-
-    const slug = `${baslik.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${nanoid(6)}`;
+    // 🟢 Slug oluşturma (Türkçe karakter düzeltmesi ile)
+    const slug = `${turkceKarakterleriDonustur(baslik)}-${nanoid(6)}`;
 
     // 📌 İçeriği veritabanına ekle
     const [result] = await pool.query(

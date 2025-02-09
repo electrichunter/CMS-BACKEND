@@ -4,7 +4,7 @@ import pool from '../confg/dbconfig.js'; // Veritabanı bağlantısı
 const router = express.Router();
 
 // 🔵 Tüm içerikleri getir
-router.get('/f', async (req, res) => {
+router.get('/', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM icerikler');
         res.status(200).json({ success: true, data: rows });
@@ -13,9 +13,8 @@ router.get('/f', async (req, res) => {
         res.status(500).json({ success: false, message: 'Sunucu hatası' });
     }
 });
-
-// 🟢 Belirli bir içeriği getir
-router.get('/:id', async (req, res) => {
+ 
+router.get('/id=:id', async (req, res) => {
     const { id } = req.params;
 
     try {

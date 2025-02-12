@@ -2,6 +2,8 @@ import express from 'express';
 import user from './routes/login/login-regiser.js';
  import icerik from './routes/icerik/icerik-post.js';
  import icerikget from './routes/icerik/icerik-get.js';
+import icerikonay from './routes/icerik/onay/icerik-onay.js';
+
 const app = express();
 app.use(express.json());
 
@@ -16,6 +18,8 @@ app.use('/user', user);
 app.use('/icerik', icerik);
  
 app.use('/icerikget', icerikget);
+
+app.use('/onay',icerikonay);
 
 // 404 Hatası için middleware
 app.use((req, res) => {

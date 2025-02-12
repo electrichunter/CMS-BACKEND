@@ -4,7 +4,7 @@ import { nanoid } from 'nanoid';
 
 const router = express.Router();
 
-// slug Türkçe karakterleri dönüştürme fonksiyonu
+// Slug Türkçe karakterleri dönüştürme fonksiyonu
 const turkceKarakterleriDonustur = (text) => {
   const harfMap = {
     'ı': 'i', 'ğ': 'g', 'ü': 'u', 'ş': 's', 'ö': 'o', 'ç': 'c',
@@ -30,22 +30,45 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Zorunlu alanları doldurun' });
     }
 
-    // 🟢 Slug oluşturma (Türkçe karakter düzeltmesi ile)
+    // 🟢 Slug oluşturma
     const slug = `${turkceKarakterleriDonustur(baslik)}-${nanoid(6)}`;
 
-    // 📌 İçeriği veritabanına ekle
-    const [result] = await pool.query(
-      `INSERT INTO icerikler (baslik, icerik, meta_baslik, meta_aciklama, slug, yazar_id) 
-      VALUES (?, ?, ?, ?, ?, ?)`,
-      [baslik, icerik, meta_baslik, meta_aciklama, slug, yazar_id]
-    );
+    // 📌 TRANSACTION başlat (iki tabloya güvenli ekleme yapmak için)
+    const conn = await pool.getConnection();
+    await conn.beginTransaction();
 
-    res.status(201).json({
-      success: true,
-      message: 'İçerik başarıyla eklendi',
-      contentId: result.insertId,
-      slug
-    });
+    try {
+      // 📌 İçeriği veritabanına ekle
+      const [result] = await conn.query(
+        `INSERT INTO icerikler (baslik, icerik, meta_baslik, meta_aciklama, slug, yazar_id) 
+        VALUES (?, ?, ?, ?, ?, ?)`,
+        [baslik, icerik, meta_baslik, meta_aciklama, slug, yazar_id]
+      );
+
+      const icerik_id = result.insertId;
+
+      // 📌 İçeriği "onay" tablosuna ekle (varsayılan olarak 'beklemede' durumu ile)
+      await conn.query(
+        `INSERT INTO icerik_onaylari (icerik_id, durum) VALUES (?, ?)`,
+        [icerik_id, 'beklemede']
+      );
+
+      // 🟢 İşlemi tamamla
+      await conn.commit();
+      conn.release();
+
+      res.status(201).json({
+        success: true,
+        message: 'İçerik başarıyla eklendi ve onay için gönderildi.',
+        contentId: icerik_id,
+        slug
+      });
+
+    } catch (error) {
+      await conn.rollback(); // Hata olursa işlemi geri al
+      conn.release();
+      throw error;
+    }
 
   } catch (error) {
     console.error('İçerik ekleme hatası:', error);
